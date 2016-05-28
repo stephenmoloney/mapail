@@ -1,0 +1,61 @@
+defmodule Mapail.Mixfile do
+  use Mix.Project
+
+  def project do
+    [
+    app: :mapail,
+    version: version(),
+    source_url: source_url(),
+    name: name(),
+    elixir: "~> 1.2",
+    build_embedded: Mix.env == :prod,
+    start_permanent: Mix.env == :prod,
+    description: description(),
+    package: package(),
+    deps: deps(),
+    docs: docs()
+    ]
+  end
+
+  defp version(), do: "0.1.0"
+  defp name(), do: "Mapáil"
+  defp source_url(), do: "https://github.com/stephenmoloney/mapail"
+  defp maintainers(), do: ["Stephen Moloney"]
+
+  def application() do
+    [applications: [:logger, :maptu]]
+  end
+
+  defp deps() do
+    [
+    {:maptu, path: "../maptu"},
+    {:morph, "~> 0.1.0"},
+    {:og, "~> 0.1.0"},
+
+    {:earmark, ">= 0.0.0", only: :dev},
+    {:ex_doc, ">= 0.0.0", only: :dev}
+    ]
+  end
+
+  defp description() do
+    ~s"""
+    Convert maps with string keys to an elixir struct with Mapáil.
+    """
+  end
+
+  defp package() do
+    %{
+      licenses: ["MIT"],
+      maintainers: maintainers(),
+      links: %{ "GitHub" => source_url()},
+      files: ~w(lib mix.exs README* LICENSE* CHANGELOG*)
+     }
+  end
+
+  defp docs() do
+    [
+    main: "api-reference"
+    ]
+  end
+
+end
