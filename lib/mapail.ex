@@ -43,7 +43,7 @@ defmodule Mapail do
               "age": 30
               }
 
-      Mapail.map_to_struct(user, MapailTest.User)
+      Mapail.map_to_struct(user, User)
 
       {:ok, %User{
                  first_name: "John",
@@ -56,7 +56,7 @@ defmodule Mapail do
   `rest` turned on, the keys would not match and the leftover map can optionally be
   returned separately.
 
-  Mapail.map_to_struct(user, MapailTest.User, transformations: [], rest: :true)
+  Mapail.map_to_struct(user, User, transformations: [], rest: :true)
 
       {:ok, %User{
                  first_name: :nil,
