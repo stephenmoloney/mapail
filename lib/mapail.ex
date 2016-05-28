@@ -152,7 +152,6 @@ defmodule Mapail do
                                                {:ok, struct, map}
   def map_to_struct(map, module, opts \\ []) do
     maptu_fn = if Keyword.get(opts, :rest, :false) in [:true, :merge], do: &Maptu.struct_rest/2, else: &Maptu.struct/2
-    # map = Map.put(map, "__struct__", Atom.to_string(module))
     map_to_struct(map, module, maptu_fn, opts)
   end
 
@@ -213,8 +212,7 @@ defmodule Mapail do
   """
   @spec map_to_struct!(map, atom, Keyword.t) :: struct | no_return
   def map_to_struct!(map, module, opts \\ []) do
-    maptu_fn = if Keyword.get(opts, :rest, :false) == :merge, do: &Maptu.struct_rest/2, else: &Maptu.struct/2
-    # map = Map.put(map, "__struct__", Atom.to_string(module))
+    maptu_fn = &Maptu.struct/2
     case map_to_struct(map, module, maptu_fn, opts) do
       {:error, error} -> raise(ArgumentError, Og.log_return(error, __ENV__, :error))
       {:ok, result} -> result
@@ -235,7 +233,9 @@ defmodule Mapail do
       merged_map = Map.merge(transformed_map, unmatched_map)
       if opts[:rest] == :merge do
         case maptu_fn.(module, merged_map) do
-          {:ok, res, rest} -> {:ok, Map.put(res, :mapail, rest)}
+          {:ok, res} ->
+
+            {:ok, Map.put(res, :mapail, rest)}
           {:error, reason} -> {:error, reason}
         end
       else
