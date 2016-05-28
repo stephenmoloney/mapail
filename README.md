@@ -71,17 +71,17 @@ Mapail.map_to_struct(user, MapailTest.User, transformations: [], rest: :true)
 
 The package can be installed as follows:
 
-  1. Add mapail to your list of dependencies in `mix.exs`:
+1. Add mapail to your list of dependencies in `mix.exs`:
 
-        def deps do
-          [{:mapail, "~> 0.1.0"}]
-        end
+      def deps do
+        [{:mapail, "~> 0.1.0"}]
+      end
 
-  2. Ensure mapail is started before your application:
+2. Ensure mapail is started before your application:
 
-        def application do
-          [applications: [:mapail]]
-        end
+      def application do
+        [applications: [:mapail]]
+      end
 
 The package can be found in [hex](https://hexdocs.pm/mapail).
 
