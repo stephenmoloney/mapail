@@ -18,7 +18,7 @@ defmodule Mapail.Mixfile do
   end
 
   defp version(), do: "0.1.0"
-  defp name(), do: "Mapáil"
+  defp name(), do: "Mapail"
   defp source_url(), do: "https://github.com/stephenmoloney/mapail"
   defp maintainers(), do: ["Stephen Moloney"]
 
@@ -39,7 +39,7 @@ defmodule Mapail.Mixfile do
 
   defp description() do
     ~s"""
-    Convert maps with string keys to an elixir struct with Mapáil.
+    Convert maps with string keys to an elixir struct with Mapail.
     """
   end
 
