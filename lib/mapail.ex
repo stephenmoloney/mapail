@@ -152,7 +152,6 @@ defmodule Mapail do
                                                {:ok, struct, map}
   def map_to_struct(map, module, opts \\ []) do
     maptu_fn = if Keyword.get(opts, :rest, :false) in [:true, :merge], do: &Maptu.struct_rest/2, else: &Maptu.struct/2
-    # map = Map.put(map, "__struct__", Atom.to_string(module))
     map_to_struct(map, module, maptu_fn, opts)
   end
 
@@ -214,7 +213,6 @@ defmodule Mapail do
   @spec map_to_struct!(map, atom, Keyword.t) :: struct | no_return
   def map_to_struct!(map, module, opts \\ []) do
     maptu_fn = if Keyword.get(opts, :rest, :false) == :merge, do: &Maptu.struct_rest/2, else: &Maptu.struct/2
-    # map = Map.put(map, "__struct__", Atom.to_string(module))
     case map_to_struct(map, module, maptu_fn, opts) do
       {:error, error} -> raise(ArgumentError, Og.log_return(error, __ENV__, :error))
       {:ok, result} -> result
@@ -226,6 +224,7 @@ defmodule Mapail do
     map_bin_keys = Map.keys(map)
     struct_bin_keys = module.__struct__() |> Map.keys() |> Enum.map(&Atom.to_string/1)
     non_matching_keys = non_matching_keys(map_bin_keys, struct_bin_keys)
+    result =
     case non_matching_keys do
       [] -> maptu_fn.(module, map)
       _ ->
@@ -233,14 +232,15 @@ defmodule Mapail do
       transformed_map_keys = Map.keys(transformed_map)
       unmatched_map = get_unmatched_map_with_original_keys(map, keys_trace)
       merged_map = Map.merge(transformed_map, unmatched_map)
-      if opts[:rest] == :merge do
-        case maptu_fn.(module, merged_map) do
-          {:ok, res, rest} -> {:ok, Map.put(res, :mapail, rest)}
-          {:error, reason} -> {:error, reason}
-        end
-      else
-        maptu_fn.(module, merged_map)
+      maptu_fn.(module, merged_map)
+    end
+    if opts[:rest] == :merge do
+      case result do
+        {:ok, res, rest} -> {:ok, Map.put(res, :mapail, rest)}
+        {:error, reason} -> {:error, reason}
       end
+    else
+      result
     end
   end
 
