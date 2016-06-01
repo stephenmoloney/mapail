@@ -224,6 +224,7 @@ defmodule Mapail do
     map_bin_keys = Map.keys(map)
     struct_bin_keys = module.__struct__() |> Map.keys() |> Enum.map(&Atom.to_string/1)
     non_matching_keys = non_matching_keys(map_bin_keys, struct_bin_keys)
+
     result =
     case non_matching_keys do
       [] -> maptu_fn.(module, map)
@@ -234,6 +235,7 @@ defmodule Mapail do
       merged_map = Map.merge(transformed_map, unmatched_map)
       maptu_fn.(module, merged_map)
     end
+
     if opts[:rest] == :merge do
       case result do
         {:ok, res, rest} -> {:ok, Map.put(res, :mapail, rest)}
@@ -242,6 +244,7 @@ defmodule Mapail do
     else
       result
     end
+
   end
 
 
@@ -260,7 +263,7 @@ defmodule Mapail do
     Enum.reduce(keys_trace, %{},
       fn({k, v}, acc) ->
         if k !== v do
-          Map.put(acc, Map.fetch!(keys_trace, k), Map.fetch!(map, k))
+          Map.put(acc, k, Map.fetch!(map, k))
         else
           acc
         end
