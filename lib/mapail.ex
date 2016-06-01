@@ -225,7 +225,6 @@ defmodule Mapail do
     struct_bin_keys = module.__struct__() |> Map.keys() |> Enum.map(&Atom.to_string/1)
     non_matching_keys = non_matching_keys(map_bin_keys, struct_bin_keys)
 
-    result =
     case non_matching_keys do
       [] -> maptu_fn.(module, map)
       _ ->
@@ -234,16 +233,17 @@ defmodule Mapail do
       unmatched_map = get_unmatched_map_with_original_keys(map, keys_trace)
       merged_map = Map.merge(transformed_map, unmatched_map)
       maptu_fn.(module, merged_map)
+      |> remove_transformed_unmatched_keys(transformed_map_keys)
     end
-
-    if opts[:rest] == :merge do
-      case result do
-        {:ok, res, rest} -> {:ok, Map.put(res, :mapail, rest)}
+    |> case do
+        {:ok, res, rest} ->
+          if opts[:rest] == :merge do
+            {:ok, Map.put(res, :mapail, rest)}
+          else
+            {:ok, res, rest}
+          end
         {:error, reason} -> {:error, reason}
       end
-    else
-      result
-    end
 
   end
 
@@ -302,6 +302,18 @@ defmodule Mapail do
         end
       end
     )
+  end
+
+
+  defp remove_transformed_unmatched_keys({:error, reason}, _non_matching_transformed_keys) do
+    {:error, reason}
+  end
+  defp remove_transformed_unmatched_keys({:ok, res, rest}, non_matching_transformed_keys) do
+  rest =
+  Enum.reduce(non_matching_transformed_keys, rest,
+      fn(k, acc) -> if Map.has_key?(acc, k), do: Map.delete(acc, k), else: acc end
+    )
+  {:ok, res, rest}
   end
 
 
