@@ -124,9 +124,9 @@ defmodule Mapail do
 
   Example (non-matching keys - without transformations):
       %Range{first: 1, last: 5} <==> %{"first" => 1, "Last" => 5}
-      iex> {:ok, r} =Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range, transformations: []); Map.keys(r);
+      iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range, transformations: []); Map.keys(r);
       [:__struct__, :first, :last]
-      iex> {:ok, r} =Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range, transformations: []); Map.values(r);
+      iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range, transformations: []); Map.values(r);
       [Range, 1, nil]
 
   Example (non-matching keys):
@@ -233,7 +233,7 @@ defmodule Mapail do
       unmatched_map = get_unmatched_map_with_original_keys(map, keys_trace)
       merged_map = Map.merge(transformed_map, unmatched_map)
       maptu_fn.(module, merged_map)
-      |> remove_transformed_unmatched_keys(transformed_map_keys)
+      |> remove_transformed_unmatched_keys(keys_trace)
     end
     |> case do
         {:ok, res, rest} ->
@@ -242,6 +242,7 @@ defmodule Mapail do
           else
             {:ok, res, rest}
           end
+        {:ok, res} -> {:ok, res}
         {:error, reason} -> {:error, reason}
       end
 
@@ -305,15 +306,24 @@ defmodule Mapail do
   end
 
 
-  defp remove_transformed_unmatched_keys({:error, reason}, _non_matching_transformed_keys) do
+  defp remove_transformed_unmatched_keys({:error, reason}, _keys_trace) do
     {:error, reason}
   end
-  defp remove_transformed_unmatched_keys({:ok, res, rest}, non_matching_transformed_keys) do
-  rest =
-  Enum.reduce(non_matching_transformed_keys, rest,
-      fn(k, acc) -> if Map.has_key?(acc, k), do: Map.delete(acc, k), else: acc end
-    )
-  {:ok, res, rest}
+  defp remove_transformed_unmatched_keys({:ok, res}, _keys_trace) do
+    {:ok, res}
+  end
+  defp remove_transformed_unmatched_keys({:ok, res, rest}, keys_trace) do
+    rest =
+    Enum.reduce(keys_trace, rest,
+        fn({orig_k, trans_k}, acc) ->
+          if orig_k !== trans_k && Map.has_key?(acc, trans_k) do
+            Map.delete(acc, trans_k)
+          else
+            acc
+          end
+        end
+      )
+    {:ok, res, rest}
   end
 
 
