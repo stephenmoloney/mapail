@@ -214,7 +214,7 @@ defmodule Mapail do
   def map_to_struct!(map, module, opts \\ []) do
     maptu_fn = if Keyword.get(opts, :rest, :false) == :merge, do: &Maptu.struct_rest/2, else: &Maptu.struct/2
     case map_to_struct(map, module, maptu_fn, opts) do
-      {:error, error} -> raise(ArgumentError, Og.log_return(error, __ENV__, :error))
+      {:error, error} -> raise(ArgumentError, error)
       {:ok, result} -> result
     end
   end

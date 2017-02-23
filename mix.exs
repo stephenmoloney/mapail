@@ -29,8 +29,7 @@ defmodule Mapail.Mixfile do
   defp deps() do
     [
     {:maptu, github: "stephenmoloney/maptu", commit: "5c210e3d09b049c26bcc86703905099082a00f41"},
-    {:morph, "~> 0.1.0"},
-    {:og, "~> 0.1.0"},
+    {:og, ">= 0.2.4"},
 
     {:earmark, ">= 0.0.0", only: :dev},
     {:ex_doc, ">= 0.0.0", only: :dev}
