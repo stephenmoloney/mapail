@@ -229,7 +229,7 @@ defmodule Mapail do
       [] -> maptu_fn.(module, map)
       _ ->
       {transformed_map, keys_trace} = apply_transformations(map, non_matching_keys, opts)
-      transformed_map_keys = Map.keys(transformed_map)
+#      transformed_map_keys = Map.keys(transformed_map)
       unmatched_map = get_unmatched_map_with_original_keys(map, keys_trace)
       merged_map = Map.merge(transformed_map, unmatched_map)
       maptu_fn.(module, merged_map)
@@ -291,9 +291,10 @@ defmodule Mapail do
       fn({k, v}, {mod_map, keys_trace}) ->
         case k in non_matching_keys do
           :true ->
+            key = Macro.underscore(k) |> String.downcase()
             {
-            Map.delete(mod_map, k) |> Map.put(Morph.to_snake(k), v),
-            Map.put(keys_trace, k, Morph.to_snake(k)),
+            Map.delete(mod_map, k) |> Map.put(key, v),
+            Map.put(keys_trace, k, key),
             }
           :false ->
             {
