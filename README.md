@@ -73,15 +73,19 @@ The package can be installed as follows:
 
 1. Add mapail to your list of dependencies in `mix.exs`:
 
-      def deps do
-        [{:mapail, "~> 0.2"}]
-      end
+```
+def deps do
+  [{:mapail, "~> 0.2"}]
+end
+```
 
 2. Ensure mapail is started before your application:
 
-      def application do
-        [applications: [:mapail]]
-      end
+```
+def application do
+  [applications: [:mapail]]
+end
+```
 
 The package can be found in [hex](https://hexdocs.pm/mapail).
 

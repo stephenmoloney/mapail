@@ -74,11 +74,8 @@ defmodule Mapail do
   ## Dependencies
 
   This library has a dependency on the following libraries:
-  - [Maptu](https://hex.pm/packages/maptu) v0.1.0 library. For converting a matching map to a struct.
-  MIT © 2016 Andrea Leopardi, Aleksei Magusev. [Licence]()
-  - [Morph](https://hex.pm/packages/morph) v0.1.0 library. For converting strings to snake_case strings.
-  Copyright (c) 2016, Charles Moncrief [Licence](https://github.com/cmoncrief/elixir-morph/blob/master/LICENSE)
-
+  - [Maptu](https://hex.pm/packages/maptu) v1.0.0 library. For converting a matching map to a struct.
+  MIT © 2016 Andrea Leopardi, Aleksei Magusev. [Licence](https://github.com/lexhide/maptu/blob/master/LICENSE.txt)
   """
   require Maptu
 
