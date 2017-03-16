@@ -9,8 +9,8 @@ defmodule Mapail do
   This particularly can be the case when maps originate from `json` and the formatting of the json is not
   immediately amenable to conversion to a struct. Often, the user may have to perform string transformations
   on the `json` in order to convert it to an atom. Doing a simple `Enum.map(String.to_atom/1)` runs the risk of
-  exceeding the maximum number of atoms in the erlang VM. This library tries to assist in the conversion by
-  providing a `map_to_struct/2` function.
+  exceeding the maximum number of atoms in the erlang VM. This library tries to assist in the coercion of json
+  to a map by providing a `map_to_struct/2` function.
 
 
   ## Features
