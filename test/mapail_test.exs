@@ -49,5 +49,11 @@ defmodule MapailTest do
     assert(actual_struct == Map.put(expected(), :mapail, %{"age" => 33}))
   end
 
+  test "Mapail.map_to_struct/2 - non-matching keys - mixed maps" do
+    assert_raise ArgumentError, fn ->
+      {:ok, actual_struct} = Mapail.map_to_struct(%{"first_name" => "John", "username" => "john", "password" => "pass", :age => 33}, MapailTest.User, rest: :merge)
+    end
+  end
+
 
 end

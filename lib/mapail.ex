@@ -288,7 +288,11 @@ defmodule Mapail do
       fn({k, v}, {mod_map, keys_trace}) ->
         case k in non_matching_keys do
           :true ->
-            key = Macro.underscore(k) |> String.downcase()
+            key =
+            case is_atom(k) do
+              :true -> raise ArgumentError, "Mapail expects only maps with string keys."
+              :false -> Macro.underscore(k) |> String.downcase()
+            end
             {
             Map.delete(mod_map, k) |> Map.put(key, v),
             Map.put(keys_trace, k, key),

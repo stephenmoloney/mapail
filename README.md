@@ -13,54 +13,155 @@ force the key to match the key of the struct. Currently, the only transformation
 - *Residual maps*: Optionally, the part of the map leftover after the struct has been built can be retrieved
 or merged back into the returned struct.
 
-## Example
+## Examples
 
-```
-defmodule User do
-  defstruct [:first_name, :username, :password]
-end
-```
 
-As seen below the map does not exactly match the struct keys due to
-CamelCasing in this instance. `Mapáil` will attempt to match with the
-struct keys by converting the unmatched keys to snake_case.
+#### Example (1)
+
+- Converting a map using the default settings which include coercions of keys
+into the `snake_case` format and discarding any unmatching key-value pairs.
+
 ```elixir
 user = %{
         "FirstName" => "John",
         "Username" => "john",
         "password" => "pass",
-        "age": 30
-        }
-
-Mapail.map_to_struct(user, MapailTest.User)
-
-{:ok, %User{
-           first_name: "John",
-           username: "john",
-           password: "pass"
-           }
-}
-```
-
-If the same conversion is attempted with `transformations` turned off and
-`rest` turned on, the keys would not match and the leftover map can optionally be
-returned separately.
-
-```elixir
-Mapail.map_to_struct(user, MapailTest.User, transformations: [], rest: :true)
-
-{:ok, %User{
-           first_name: :nil,
-           username: :nil,
-           password: "pass"
-           },
-      %{
-        "FirstName" => "John",
-        "Username" => "john",
         "age" => 30
         }
+
+defmodule User, do: defstruct [:first_name, :username, :password]
+
+Mapail.map_to_struct(user, User)
+
+{:ok, %User{
+  first_name: "John",
+  username: "john",
+  password: "pass"
+  }
 }
 ```
+
+
+#### Example (2)
+
+- Converting a map without applying any transformations so that only exact matches
+on key-value pairs will be used and unmatching key-value pairs will be discarded.
+
+```elixir
+user = %{
+        "FirstName" => "John",
+        "Username" => "john",
+        "password" => "pass",
+        "age" => 30
+        }
+
+defmodule User, do: defstruct [:first_name, :username, :password]
+
+Mapail.map_to_struct(user, User, transformations: [])
+
+{:ok, %User{
+  first_name: nil,
+  password: "pass",
+  username: nil
+  }
+}
+```
+
+#### Example (3)
+
+- Converting a map without applying any transformations so that only exact matches
+on key-value pairs will be used and unmatching key-value pairs will be returned as a separate map.
+
+```elixir
+user = %{
+        "FirstName" => "John",
+        "Username" => "john",
+        "password" => "pass",
+        "age" => 30
+        }
+
+defmodule User, do: defstruct [:first_name, :username, :password]
+
+Mapail.map_to_struct(user, User, transformations: [], rest: :true)
+
+{:ok, %User{
+  first_name: nil,
+  password: "pass",
+  username: nil
+  },
+  %{
+  "FirstName" => "John",
+  "Username" => "john",
+  "age" => 30
+  }
+}
+```
+
+#### Example (5)
+
+- Converting a map using the default settings which include coercions of keys
+into the `snake_case` format and unmatching key-value pairs will be merged back into
+the original map under the `:mapail` key.
+
+```elixir
+user = %{
+        "FirstName" => "John",
+        "Username" => "john",
+        "password" => "pass",
+        "age" => 30
+        }
+
+defmodule User, do: defstruct [:first_name, :username, :password]
+
+Mapail.map_to_struct(user, User, rest: :merge)
+
+{:ok, %{
+    __struct__: User,
+    first_name: "John",
+    password: "pass",
+    username: "john",
+    mapail: %{
+      "FirstName" => "John",
+      "Username" => "john",
+      "age" => 30
+    }
+  }
+}
+
+```
+
+#### Example (4)
+
+- Converting a map without applying any transformations so that only exact matches
+on key-value pairs will be used and unmatching key-value pairs will be merged back into
+the original map under the `:mapail` key.
+
+```elixir
+user = %{
+        "FirstName" => "John",
+        "Username" => "john",
+        "password" => "pass",
+        "age" => 30
+        }
+
+defmodule User, do: defstruct [:first_name, :username, :password]
+
+Mapail.map_to_struct(user, User, transformations: [], rest: :merge)
+
+{:ok, %{
+    __struct__: User,
+    first_name: nil,
+    password: "pass",
+    username: nil,
+    mapail: %{
+      "FirstName" => "John",
+      "Username" => "john",
+      "age" => 30
+    },
+  }
+}
+```
+
 
 
 ## Documentation
