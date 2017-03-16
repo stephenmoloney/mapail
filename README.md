@@ -97,7 +97,7 @@ Mapail.map_to_struct(user, User, transformations: [], rest: :true)
 }
 ```
 
-#### Example (5)
+#### Example (4)
 
 - Converting a map using the default settings which include coercions of keys
 into the `snake_case` format and unmatching key-value pairs will be merged back into
@@ -130,7 +130,7 @@ Mapail.map_to_struct(user, User, rest: :merge)
 
 ```
 
-#### Example (4)
+#### Example (5)
 
 - Converting a map without applying any transformations so that only exact matches
 on key-value pairs will be used and unmatching key-value pairs will be merged back into

@@ -1,7 +1,7 @@
 defmodule Mapail.Mixfile do
   use Mix.Project
   @elixir_versions "~> 1.2 or ~> 1.3 or ~> 1.4 or ~> 1.5"
-  @version "0.2.0"
+  @version "0.2.1"
   @source_url "https://github.com/stephenmoloney/mapail"
   @maintainers ["Stephen Moloney"]
 
