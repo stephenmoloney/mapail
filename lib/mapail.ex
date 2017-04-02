@@ -80,6 +80,30 @@ defmodule Mapail do
   require Maptu
 
 
+  @doc """
+  Attempts to convert a map with atom only or atom/string mixed keys
+  to a map with string keys only.
+
+  It will raise an ArgumentError if maps with keys of types other than
+  atoms or strings are passed.
+  """
+  @spec stringify_map(map) :: {:ok, map} | {:error, String.t}
+  def stringify_map(map) do
+    try do
+      Enum.reduce(map, %{}, fn({k,v}, acc) ->
+        try do
+          Map.put(acc, Atom.to_string(k), v)
+        rescue
+          e in ArgumentError ->
+            is_binary(k) && Map.put(acc, k, v) || raise(e)
+        end
+      end)
+    rescue
+      e in ArgumentError -> {:error, e.message}
+    end
+  end
+
+
   @doc ~s"""
   Converts a map to a struct.
 
