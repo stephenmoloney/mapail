@@ -1,37 +1,67 @@
 # Mapáil [![Build Status](https://travis-ci.org/stephenmoloney/mapail.svg)](https://travis-ci.org/stephenmoloney/mapail) [![Hex Version](http://img.shields.io/hexpm/v/mapail.svg?style=flat)](https://hex.pm/packages/mapail) [![Hex docs](http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat)](https://hexdocs.pm/mapail)
 
-Convert maps with string keys to an [elixir](http://elixir-lang.org/) struct.
+Helper library to convert a map into a struct or a struct to a struct.
 
 
 ## Features
 
-- *String keyed maps*: Convert maps with string keys to a corresponding struct.
 
-- *Transformations*: Optionally, string manipulations can be applied to the string of the map so as to attempt to
+- String keyed maps: Convert maps with string keys to a corresponding struct.
+
+- Transformations: Optionally, string manipulations can be applied to the key of the map so as to attempt to
 force the key to match the key of the struct. Currently, the only transformation option is conversion to snake_case.
 
-- *Residual maps*: Optionally, the part of the map leftover after the struct has been built can be retrieved
+- Residual maps: Optionally, the part of the map leftover after the struct has been built can be retrieved
 or merged back into the returned struct.
+
+- Helper function for converting atom-keyed maps or string/atom mixed keyed maps to string-keyed only maps.
+
+- Helper function for converting a struct to another struct.
+
 
 ## Examples
 
 
-#### Example (1)
-
-- Converting a map using the default settings which include coercions of keys
-into the `snake_case` format and discarding any unmatching key-value pairs.
+#### Example - exact key matching (no transformations)
 
 ```elixir
-user = %{
-        "FirstName" => "John",
-        "Username" => "john",
-        "password" => "pass",
-        "age" => 30
-        }
+defmodule User do
+  defstruct [:first_name, :username, :password]
+end
 
-defmodule User, do: defstruct [:first_name, :username, :password]
+user = %{
+  "FirstName" => "John",
+  "Username" => "john",
+  "password" => "pass",
+  "age" => 30
+}
 
 Mapail.map_to_struct(user, User)
+
+{:ok, %User{
+  first_name: :nil,
+  username: :nil,
+  password: "pass"
+  }
+}
+```
+
+
+#### Example - key matching with `transformations: [:snake_case]`
+
+```elixir
+defmodule User do
+  defstruct [:first_name, :username, :password]
+end
+
+user = %{
+  "FirstName" => "John",
+  "Username" => "john",
+  "password" => "pass",
+  "age" => 30
+}
+
+Mapail.map_to_struct(user, User, transformations: [:snake_case])
 
 {:ok, %User{
   first_name: "John",
@@ -41,132 +71,69 @@ Mapail.map_to_struct(user, User)
 }
 ```
 
-
-#### Example (2)
-
-- Converting a map without applying any transformations so that only exact matches
-on key-value pairs will be used and unmatching key-value pairs will be discarded.
+#### Example - getting unmatched elements in a separate map
 
 ```elixir
+defmodule User do
+  defstruct [:first_name, :username, :password]
+end
+
 user = %{
-        "FirstName" => "John",
-        "Username" => "john",
-        "password" => "pass",
-        "age" => 30
-        }
-
-defmodule User, do: defstruct [:first_name, :username, :password]
-
-Mapail.map_to_struct(user, User, transformations: [])
-
-{:ok, %User{
-  first_name: nil,
-  password: "pass",
-  username: nil
-  }
-}
-```
-
-#### Example (3)
-
-- Converting a map without applying any transformations so that only exact matches
-on key-value pairs will be used and unmatching key-value pairs will be returned as a separate map.
-
-```elixir
-user = %{
-        "FirstName" => "John",
-        "Username" => "john",
-        "password" => "pass",
-        "age" => 30
-        }
-
-defmodule User, do: defstruct [:first_name, :username, :password]
-
-Mapail.map_to_struct(user, User, transformations: [], rest: :true)
-
-{:ok, %User{
-  first_name: nil,
-  password: "pass",
-  username: nil
-  },
-  %{
   "FirstName" => "John",
   "Username" => "john",
+  "password" => "pass",
   "age" => 30
+}
+
+{:ok, user_struct, leftover} = Mapail.map_to_struct(user, User, rest: :true)
+
+
+{:ok, %User{
+  first_name: :nil,
+  username: "pass",
+  password: :nil
+  },
+  %{
+    "FirstName" => "John",
+    "Username" => "john",
+    "age" => 30
   }
 }
 ```
 
-#### Example (4)
-
-- Converting a map using the default settings which include coercions of keys
-into the `snake_case` format and unmatching key-value pairs will be merged back into
-the original map under the `:mapail` key.
+#### Example - getting unmatched elements in a merged nested map
 
 ```elixir
-user = %{
-        "FirstName" => "John",
-        "Username" => "john",
-        "password" => "pass",
-        "age" => 30
-        }
+defmodule User do
+  defstruct [:first_name, :username, :password]
+end
 
-defmodule User, do: defstruct [:first_name, :username, :password]
+user = %{
+  "FirstName" => "John",
+  "Username" => "john",
+  "password" => "pass",
+  "age" => 30
+}
 
 Mapail.map_to_struct(user, User, rest: :merge)
 
-{:ok, %{
-    __struct__: User,
-    first_name: "John",
-    password: "pass",
-    username: "john",
-    mapail: %{
-      "FirstName" => "John",
-      "Username" => "john",
-      "age" => 30
-    }
-  }
-}
-
-```
-
-#### Example (5)
-
-- Converting a map without applying any transformations so that only exact matches
-on key-value pairs will be used and unmatching key-value pairs will be merged back into
-the original map under the `:mapail` key.
-
-```elixir
-user = %{
-        "FirstName" => "John",
-        "Username" => "john",
-        "password" => "pass",
-        "age" => 30
-        }
-
-defmodule User, do: defstruct [:first_name, :username, :password]
-
-Mapail.map_to_struct(user, User, transformations: [], rest: :merge)
-
-{:ok, %{
-    __struct__: User,
-    first_name: nil,
-    password: "pass",
-    username: nil,
-    mapail: %{
-      "FirstName" => "John",
-      "Username" => "john",
-      "age" => 30
-    },
+{:ok, %User{
+  first_name: :nil,
+  username: "pass",
+  password: :nil,
+  mapail: %{
+    "FirstName" => "John",
+    "Username" => "john",
+    "age" => 30
   }
 }
 ```
-
 
 
 ## Documentation
 
-- [Documentation](https://hexdocs.pm/mapail/api-reference.html) can be found in the hex package manager.
+- [Documentation](https://hex.pm/packages/mapail) can be found in the hex package manager.
+
 
 ## Installation
 
@@ -176,7 +143,7 @@ The package can be installed as follows:
 
 ```
 def deps do
-  [{:mapail, "~> 0.2"}]
+  [{:mapail, "~> 1.0"}]
 end
 ```
 
@@ -188,13 +155,15 @@ def application do
 end
 ```
 
-The package can be found in [hex](https://hexdocs.pm/mapail).
+The package can be found in [hex](https://hex.pm/packages/mapail).
+
 
 ## Credit
 
-This library has a dependency on the following libraries:
+This library depends on the following library:
 - [Maptu](https://hex.pm/packages/maptu) v1.0.0 library. For converting a matching map to a struct.
 MIT © 2016 Andrea Leopardi, Aleksei Magusev. [Licence](https://github.com/lexhide/maptu/blob/master/LICENSE.txt)
+
 
 ## Licence
 
