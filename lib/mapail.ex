@@ -1,170 +1,390 @@
 defmodule Mapail do
   @moduledoc ~S"""
-  Helper library to convert a `map` with string keys into structs.
+  Helper library to convert a map into a struct or a struct to a struct.
+
+  Convert string-keyed maps to structs by calling the
+  `map_to_struct/3` function.
+
+  Convert atom-keyed and atom/string mixed key maps to
+  structs by piping the `stringify_map/1` into the `map_to_struct/3` function.
+
+  Convert structs to structs by calling the `struct_to_struct/2` function.
 
 
-  ## Rationale
+  ## Note
 
-  It can be laborious to reconstruct the key-value pairs of a map manually into a struct on a case by case basis.
-  This particularly can be the case when maps originate from `json` and the formatting of the json is not
-  immediately amenable to conversion to a struct. Often, the user may have to perform string transformations
-  on the `json` in order to convert it to an atom. Doing a simple `Enum.map(String.to_atom/1)` runs the risk of
-  exceeding the maximum number of atoms in the erlang VM. This library tries to assist in the coercion of json
-  to a map by providing a `map_to_struct/2` function.
+  - The [Maptu](https://github.com/lexhide/maptu) library already provides many of the
+   functions necessary for converting "encoded" maps to Elixir structs. Maptu may be
+   all you need - see [Maptu](https://github.com/lexhide/maptu). Mapail builds on top
+   of `Maptu` and incorporates it as a dependency.
+
+  - `Mapail` offers a few additional more lenient approaches to the conversion process
+  to a struct as explained in use cases. Maptu may be all you need though.
 
 
   ## Features
 
-  - *Transformations*: Optionally, string manipulations can be applied to the string of the map so as to attempt to
-  force the key to match the key of the struct. Currently, the only transformation option is conversion to snake_case.
+  - Transformations: Optionally, string manipulations can be applied to the string of
+  the map so as to attempt to force the key of the map to match the key of the struct.
+  Currently, the only transformation option is conversion to `:snake_case`.
 
-  - *Residual maps*: Optionally, the part of the map leftover after the struct has been built can be retrieved
-  or merged back into the returned struct.
+  - Residual maps: Optionally, the part of the map leftover after the struct has
+  been built can be retrieved or merged back into the returned struct.
 
 
   ## Limitations
 
-  - Currently, only converts one level deep, that is, it does not convert nested structs. This is a potential TODO task.
+  - Currently, only converts one level deep, that is, it does not convert nested structs.
+  This is a potential TODO task.
 
-  ## Example
+
+  ## Use Cases
+
+
+  - Scenario 1:
+
+  Map <==> Struct has a perfect match on the keys.
+
+      - `map_to_struct(map, MODULE)` returns `{:ok, %MODULE{} = new_struct}`
+
+
+  - Scenario 2:
+
+  Map <==> Struct has an imperfect match on the keys
+
+      - `map_to_struct(map, MODULE, rest: :true)` returns `{:ok, %MODULE{} = new_struct, rest}`
+
+
+  - Scenario 3:
+
+  Map <==> Struct has an imperfect match on the keys and a struct with and additional
+  field named `:mapail` is returned. The value for the `:mapail` fields is a
+  nested map with all non-matching key-pairs.
+
+
+      - `map_to_struct(map, MODULE, rest: :merge)` returns `{:ok, %MODULE{} = new_struct}`
+      where `new_struct.mapail` contains the non-mathing `key-value` pairs.
+
+
+  - Scenario 4:
+
+  Map <==> Struct has an imperfect match on the keys. After an initial attempt to
+   match the map keys to those of the struct keys, any non-matching keys are piped
+   through transformation function(s) which modify the key of the map in an attempt
+   to make a new match with the modified key. For now, the only transformations supported
+   are `[:snake_case]`. `:snake_case` converts the non-matching keys to snake_case.
+
+    ***NOTE***: This approach is lenient and will make matches that
+   otherwise would not have matched. It might prove useful where a `json` encoded map
+   returned from a server uses camelcasing and matches are otherwise missed. ***Only
+   use this approach when it is explicitly desired behaviour***
+
+
+      - `map_to_struct(map, MODULE, transformations: [:snake_case], rest: :true)`
+      returns `{:ok, new_struct, rest}`
+
+
+  - Scenario 5:
+
+  Map <==> Struct has a perfect match but the keys in the map are mixed case. Mapail
+   provides a utility function which can help in this situation.
+
+      - `stringify_map(map) |> map_to_struct(map, MODULE, rest: :false)`
+      returns `{:ok, %MODULE{} = new_struct}`
+
+
+  - Scenario 6:
+
+  Struct <==> Struct has a perfect match but the __struct__ fields are non-matching.
+
+      - `struct_to_struct(%Notifications.Email{}, User.Email)` returns `{:ok, %User.Email{} = new_struct}`
+
+
+  ## Example - exact key matching (no transformations)
+
 
       defmodule User do
         defstruct [:first_name, :username, :password]
       end
 
-  As seen below the map does not exactly match the struct keys due to
-  CamelCasing in this instance. `Mapáil` will attempt to match with the
-  struct keys by converting the unmatched keys to snake_case.
-
       user = %{
-              "FirstName" => "John",
-              "Username" => "john",
-              "password" => "pass",
-              "age": 30
-              }
+        "FirstName" => "John",
+        "Username" => "john",
+        "password" => "pass",
+        "age" => 30
+      }
 
       Mapail.map_to_struct(user, User)
 
       {:ok, %User{
-                 first_name: "John",
-                 username: "john",
-                 password: "pass"
-                 }
+        first_name: :nil,
+        username: :nil,
+        password: "pass"
+        }
       }
 
-  If the same conversion is attempted with `transformations` turned off and
-  `rest` turned on, the keys would not match and the leftover map can optionally be
-  returned separately.
 
-  Mapail.map_to_struct(user, User, transformations: [], rest: :true)
+  ## Example - key matching with `transformations: [:snake_case]`
+
+
+      defmodule User do
+        defstruct [:first_name, :username, :password]
+      end
+
+      user = %{
+        "FirstName" => "John",
+        "Username" => "john",
+        "password" => "pass",
+        "age" => 30
+      }
+
+      Mapail.map_to_struct(user, User, transformations: [:snake_case])
 
       {:ok, %User{
-                 first_name: :nil,
-                 username: :nil,
-                 password: "pass"
-                 },
-            %{
-              "FirstName" => "John",
-              "Username" => "john",
-              "age" => 30
-              }
+        first_name: "John",
+        username: "john",
+        password: "pass"
+        }
+      }
+
+
+  ## Example - getting unmatched elements in a separate map
+
+
+      defmodule User do
+        defstruct [:first_name, :username, :password]
+      end
+
+      user = %{
+        "FirstName" => "John",
+        "Username" => "john",
+        "password" => "pass",
+        "age" => 30
+      }
+
+      {:ok, user_struct, leftover} = Mapail.map_to_struct(user, User, rest: :true)
+
+
+      {:ok, %User{
+        first_name: :nil,
+        username: "pass",
+        password: :nil
+        },
+        %{
+          "FirstName" => "John",
+          "Username" => "john",
+          "age" => 30
+        }
+      }
+
+
+  ## Example - getting unmatched elements in a merged nested map
+
+
+      defmodule User do
+        defstruct [:first_name, :username, :password]
+      end
+
+      user = %{
+        "FirstName" => "John",
+        "Username" => "john",
+        "password" => "pass",
+        "age" => 30
+      }
+
+      Mapail.map_to_struct(user, User, rest: :merge)
+
+      {:ok, %User{
+        first_name: :nil,
+        username: "pass",
+        password: :nil,
+        mapail: %{
+          "FirstName" => "John",
+          "Username" => "john",
+          "age" => 30
+        }
       }
 
 
   ## Dependencies
 
-  This library has a dependency on the following libraries:
+  This library has a dependency on the following library:
   - [Maptu](https://hex.pm/packages/maptu) v1.0.0 library. For converting a matching map to a struct.
   MIT © 2016 Andrea Leopardi, Aleksei Magusev. [Licence](https://github.com/lexhide/maptu/blob/master/LICENSE.txt)
   """
-  require Maptu
+  require Maptu.Extension
+  @transformations [:snake_case]
+
 
 
   @doc """
-  Attempts to convert a map with atom only or atom/string mixed keys
+  Convert a map with atom only or atom/string mixed keys
   to a map with string keys only.
-
-  It will raise an ArgumentError if maps with keys of types other than
-  atoms or strings are passed.
   """
   @spec stringify_map(map) :: {:ok, map} | {:error, String.t}
   def stringify_map(map) do
-    try do
-      Enum.reduce(map, %{}, fn({k,v}, acc) ->
-        try do
-          Map.put(acc, Atom.to_string(k), v)
-        rescue
-          e in ArgumentError ->
-            is_binary(k) && Map.put(acc, k, v) || raise(e)
-        end
-      end)
-    rescue
-      e in ArgumentError -> {:error, e.message}
+    Enum.reduce(map, %{}, fn({k,v}, acc) ->
+      try do
+        Map.put(acc, Atom.to_string(k), v)
+      rescue
+        _e in ArgumentError ->
+          is_binary(k) && Map.put(acc, k, v) || {:error, "the key is not an atom nor a binary"}
+      end
+    end)
+  end
+
+
+
+  @doc """
+  Convert one form of struct into another struct.
+
+  ## Example
+
+      defmodule MyApp.URI do
+        defstruct scheme: nil, path: nil, query: nil,
+            fragment: nil, authority: nil,
+            userinfo: nil, host: nil, port: nil,
+            custom: nil
+      end
+
+      {:ok, new_struct} = struct_to_struct(%URI{}, MyApp.URI)
+
+      {:ok, new_struct, rest} = struct_to_struct(%URI{}, MyApp.URI, rest: :true)
+
+  ## Arguments
+
+      - old_struct - the originator struct
+      - module - The type of new struct which shall be returned
+      - opts - The key-value pairs can be returned separately if
+      `opts = [rest: :true]`. Defaults to `[]`.
+  """
+  @spec struct_to_struct(map, atom, list) :: {:ok, struct} | {:ok, struct, map} | {:error, String.t}
+  def struct_to_struct(old_struct, module, opts \\ []) do
+    rest = Keyword.get(opts, :rest, :false)
+    with {:ok, new_struct} <- Map.from_struct(old_struct)
+         |> Mapail.stringify_map()
+         |> Mapail.map_to_struct(module, rest: rest) do
+      {:ok, new_struct}
+    else
+      {:ok, new_struct, rest} ->
+        rest = Enum.reduce(rest, %{}, fn({k,v}, acc) ->
+          {:ok, nk} = Maptu.Extension.to_existing_atom_safe(k)
+          Map.put(acc, nk, v)
+        end)
+        {:ok, new_struct, rest}
+      {:error, error} -> {:error, error}
     end
   end
 
 
-  @doc ~s"""
-  Converts a map to a struct.
+
+  @doc """
+  Convert one form of struct into another struct.
+
+  ## Example
+
+      defmodule MyApp.URI do
+        defstruct scheme: nil, path: nil, query: nil,
+            fragment: nil, authority: nil,
+            userinfo: nil, host: nil, port: nil,
+            custom: nil
+      end
+
+      new_struct = struct_to_struct(%URI{}, MyApp.URI)
 
   ## Arguments
 
-  - `module`: The module of the struct to be created.
-  - `map`: The map to be converted to a struct.
-  - `opts`: See opts section.
+      - old_struct - the originator struct
+      - module - The type of new struct which shall be returned
+  """
+  @spec struct_to_struct!(map, atom) :: struct | no_return
+  def struct_to_struct!(old_struct, module) do
+    case struct_to_struct(old_struct, module, rest: :false) do
+      {:error, error} -> raise(ArgumentError, error)
+      {:ok, new_struct} -> new_struct
+    end
+  end
 
-  ## opts
 
-  - `transformations`: A list of transformations to apply to keys in the map in an attempt to make
-  more matches with the keys in the struct. Defaults to `[:snake_case]`. *Warning: In the event of a match
-  to a transformed key such as a key transformed to snake_case, the original map key is modified to `snake_case`
-  and it's value is added to the struct.* If set to `[]`, then no transformations are applied and only strings
-  matching exactly to the struct atoms are matched. The transformations are only applied to keys of the map that
-  do not initially match any key in the struct.
 
-  - `rest`: `:false`, `:true` or `:merge`
-      - By setting `rest` to `:true`, the 'leftover' unmatched key-value pairs of the original map
-      will also be returned in separate map with the keys in their original form.
-      Returns as a tuple in the format `{:ok, struct, rest}`
-      - By setting `rest` to `:merge`, the 'leftover' unmatched key-value pairs of the original map
-      will be merged into the struct under the key `:mapail`.
-      Returns as a tuple in the format `{:ok, struct}`
-      - By setting `rest` to `:false`, unmatched keys are silently discarded and only the struct
-      is returned with matching keys. Defaults to `:false`
-      Returns as a tuple in the format `{:ok, struct}`
+  @doc ~s"""
+  Converts a string-keyed map to a struct.
+
+  ## Arguments
+
+  - module: The module of the struct to be created.
+  - map: The map to be converted to a struct.
+  - opts: See below
+
+    - `transformations: [atom]`:
+
+    A list of transformations to apply to keys in the map where there are `non-matching`
+    keys after the inital attempt to match.
+
+    Defaults to `transformations: []` ie. no transformations are applied and only exactly matching keys are used to
+    build a struct.
+
+    If set to `transformations: [:snake_case]`, then after an initial run, non-matching keys are converted to
+    snake_case form and another attempt is made to match the keys with the snake_case keys. This
+    means less than exactly matching keys are considered a match when building the struct.
+
+
+    - `rest: atom`:
+
+    Defaults to `rest: :false`
+
+    By setting `rest: :true`, the 'leftover' unmatched key-value pairs of the original map
+    will also be returned in separate map with the keys in their original form.
+    Returns as a tuple in the format `{:ok, struct, rest}`
+
+    - By setting `rest: :merge`, the 'leftover' unmatched key-value pairs of the original map
+    will be merged into the struct as a nested map under the key `:mapail`.
+    Returns as a tuple in the format `{:ok, struct}`
+
+    - By setting `rest: :false`, unmatched keys are silently discarded and only the struct
+    is returned with matching keys. Returns as a tuple in the format `{:ok, struct}`.
 
   Example (matching keys):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "last" => 5}
+
       iex> Mapail.map_to_struct(%{"first" => 1, "last" => 5}, Range)
       {:ok, 1..5}
 
+  Example (non-matching keys):
+
+      iex> Mapail.map_to_struct(%{"line_or_bytes" => [], "Raw" => :false}, File.Stream)
+      {:ok, %File.Stream{line_or_bytes: [], modes: [], path: nil, raw: true}}
+
   Example (non-matching keys - with `snake_case` transformations):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "Last" => 5}
-      iex> Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range)
+
+      iex> Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range, transformations: [:snake_case])
       {:ok, 1..5}
 
-  Example (non-matching keys - without transformations):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "Last" => 5}
-      iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range, transformations: []); Map.keys(r);
+  Example (non-matching keys):
+
+      iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range); Map.keys(r);
       [:__struct__, :first, :last]
-      iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range, transformations: []); Map.values(r);
-      [Range, 1, nil]
+
+  Example (non-matching keys - with transformations):
+
+      iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "Last" => 5}, Range, transformations: [:snake_case]); Map.values(r);
+      [Range, 1, 5]
 
   Example (non-matching keys):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "last" => 5, "next" => 3}
+
       iex> Mapail.map_to_struct(%{"first" => 1, "last" => 5, "next" => 3}, Range)
       {:ok, 1..5}
 
-  Example (non-matching keys - capturing excess key-value pairs in separate map):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "last" => 5, "next" => 3}
+  Example (non-matching keys - capturing excess key-value pairs in separate map called rest):
+
       iex> Mapail.map_to_struct(%{"first" => 1, "last" => 5, "next" => 3}, Range, rest: :true)
       {:ok, 1..5, %{"next" => 3}}
 
   Example (non-matching keys - capturing excess key-value pairs and merging into struct under `:mapail` key):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "last" => 5, "next" => 3}
+
       iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "last" => 5, "next" => 3}, Range, rest: :merge); Map.values(r);
       [Range, 1, 5, %{"next" => 3}]
-      iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "last" => 5, "next" => 3}, Range, rest: :merge); Map.keys(r)
+
+      iex> {:ok, r} = Mapail.map_to_struct(%{"first" => 1, "last" => 5, "next" => 3}, Range, rest: :merge); Map.keys(r);
       [:__struct__, :first, :last, :mapail]
 
   """
@@ -178,67 +398,61 @@ defmodule Mapail do
 
 
   @doc ~s"""
-  Converts a map to a struct.
+  Converts a string-keyed map to a struct and raises if it fails.
 
-  ## Arguments
-
-  - `module`: The module of the struct to be created.
-  - `map`: The map to be converted to a struct.
-  - `opts`: See opts section.
-
-  ## opts
-
-  - `transformations`: A list of transformations to apply to keys in the map in an attempt to make
-  more matches with the keys in the struct. Defaults to `[:snake_case]`. *Warning: In the event of a match
-  to a transformed key such as a key transformed to snake_case, the original map key is modified to `snake_case`
-  and it's value is added to the struct.* If set to `[]`, then no transformations are applied and only strings
-  matching exactly to the struct atoms are matched. The transformations are only applied to keys of the map that
-  do not initially match any key in the struct.
-
-  - `rest`: `:false` or `:merge`
-      - By setting `rest` to `:merge`, the 'leftover' unmatched key-value pairs of the original map
-      will be merged into the struct under the key `:mapail`.
-      - By setting `rest` to `:false`, unmatched keys are silently discarded and only the struct
-      is returned with matching keys. Defaults to `:false`
+   See `map_to_struct/3`
 
   Example (matching keys):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "last" => 5}
+
       iex> Mapail.map_to_struct!(%{"first" => 1, "last" => 5}, Range)
       1..5
 
+  Example (non-matching keys):
+
+      iex> Mapail.map_to_struct!(%{"line_or_bytes" => [], "Raw" => :false}, File.Stream)
+      %File.Stream{line_or_bytes: [], modes: [], path: nil, raw: true}
+
   Example (non-matching keys - with `snake_case` transformations):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "Last" => 5}
-      iex> Mapail.map_to_struct!(%{"first" => 1, "Last" => 5}, Range)
+
+      iex> Mapail.map_to_struct!(%{"first" => 1, "Last" => 5}, Range, transformations: [:snake_case])
       1..5
 
-  Example (non-matching keys - without transformations):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "Last" => 5}
-      iex> Mapail.map_to_struct!(%{"first" => 1, "Last" => 5}, Range, transformations: []) |> Map.values
-      [Range, 1, nil]
-      iex> Mapail.map_to_struct!(%{"first" => 1, "Last" => 5}, Range, transformations: []) |> Map.keys
+  Example (non-matching keys):
+
+      iex> Mapail.map_to_struct!(%{"first" => 1, "Last" => 5}, Range) |> Map.keys();
       [:__struct__, :first, :last]
 
+      iex> Mapail.map_to_struct!(%{"first" => 1, "Last" => 5}, Range) |> Map.values();
+      [Range, 1, :nil]
+
+  Example (non-matching keys - with transformations):
+
+      iex> Mapail.map_to_struct!(%{"first" => 1, "Last" => 5}, Range, transformations: [:snake_case]) |> Map.values();
+      [Range, 1, 5]
+
   Example (non-matching keys):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "last" => 5, "next" => 3}
+
       iex> Mapail.map_to_struct!(%{"first" => 1, "last" => 5, "next" => 3}, Range)
       1..5
 
   Example (non-matching keys - capturing excess key-value pairs in separate map):
-      %Range{first: 1, last: 5} <==> %{"first" => 1, "last" => 5, "next" => 3}
-      iex> Mapail.map_to_struct!(%{"first" => 1, "last" => 5, "next" => 3}, Range, rest: :merge) |> Map.values
+
+      iex> Mapail.map_to_struct!(%{"first" => 1, "last" => 5, "next" => 3}, Range, rest: :merge) |> Map.values();
       [Range, 1, 5, %{"next" => 3}]
-      iex> Mapail.map_to_struct!(%{"first" => 1, "last" => 5, "next" => 3}, Range, rest: :merge) |> Map.keys
+
+      iex> Mapail.map_to_struct!(%{"first" => 1, "last" => 5, "next" => 3}, Range, rest: :merge) |> Map.keys();
       [:__struct__, :first, :last, :mapail]
 
   """
   @spec map_to_struct!(map, atom, Keyword.t) :: struct | no_return
   def map_to_struct!(map, module, opts \\ []) do
     maptu_fn = if Keyword.get(opts, :rest, :false) == :merge, do: &Maptu.Extension.struct_rest/2, else: &Maptu.struct/2
-    case map_to_struct(map, module, maptu_fn, opts) do
-      {:error, error} -> raise(ArgumentError, error)
-      {:ok, result} -> result
-    end
+    map_to_struct(map, module, maptu_fn, opts)
+    |> Maptu.Extension.raise_on_error()
   end
+
+
+  # private
 
 
   defp map_to_struct(map, module, maptu_fn, opts) do
@@ -247,13 +461,31 @@ defmodule Mapail do
     non_matching_keys = non_matching_keys(map_bin_keys, struct_bin_keys)
 
     case non_matching_keys do
-      [] -> maptu_fn.(module, map)
+      [] ->
+       try do
+        maptu_fn.(module, map)
+       rescue
+        e in FunctionClauseError ->
+         if e.function == :to_existing_atom_safe && e.module == Maptu && e.arity == 1 do
+           {:error, :atom_key_not_expected}
+         else
+           {:error, :unexpected_error}
+         end
+       end
       _ ->
       {transformed_map, keys_trace} = apply_transformations(map, non_matching_keys, opts)
-#      transformed_map_keys = Map.keys(transformed_map)
       unmatched_map = get_unmatched_map_with_original_keys(map, keys_trace)
       merged_map = Map.merge(transformed_map, unmatched_map)
-      maptu_fn.(module, merged_map)
+      try do
+        maptu_fn.(module, merged_map)
+      rescue
+        e in FunctionClauseError ->
+          if e.function == :to_existing_atom_safe&& e.arity == 1 do
+            {:error, :atom_key_not_expected}
+          else
+            {:error, :unexpected_error}
+          end
+      end
       |> remove_transformed_unmatched_keys(keys_trace)
     end
     |> case do
@@ -295,7 +527,10 @@ defmodule Mapail do
 
 
   defp apply_transformations(map, non_matching_keys, opts) do
-    transformations = Keyword.get(opts, :transformations, [:snake_case])
+    transformations = Keyword.get(opts, :transformations, [])
+    Enum.any?(transformations, &(Enum.member?(@transformations, &1) == :false)) &&
+    (msg = "Unknown transformation in #{inspect(transformations)}, allowed transformations: #{inspect(@transformations)}"
+    raise(ArgumentError, msg))
     {transformed_map, keys_trace} =
     if :snake_case in transformations do
       to_snake_case(map, non_matching_keys)

@@ -1,7 +1,7 @@
 defmodule Mapail.Mixfile do
   use Mix.Project
-  @elixir_versions "~> 1.2 or ~> 1.3 or ~> 1.4 or ~> 1.5"
-  @version "0.2.1"
+  @elixir_versions "~> 1.3 or ~> 1.4 or ~> 1.5"
+  @version "1.0.0"
   @source_url "https://github.com/stephenmoloney/mapail"
   @maintainers ["Stephen Moloney"]
 
@@ -14,6 +14,7 @@ defmodule Mapail.Mixfile do
     elixir: @elixir_versions,
     build_embedded: Mix.env == :prod,
     start_permanent: Mix.env == :prod,
+    elixirc_paths: elixirc_paths(Mix.env),
     description: description(),
     package: package(),
     deps: deps(),
@@ -24,12 +25,12 @@ defmodule Mapail.Mixfile do
 
 
   def application() do
-    [applications: [:logger, :maptu]]
+    [applications: []]
   end
 
   defp deps() do
     [
-      {:maptu, "~> 1.0"},
+      {:maptu, "~> 1.0.0"},
       {:earmark, ">= 0.0.0", only: :dev},
       {:ex_doc, ">= 0.0.0", only: :dev}
     ]
@@ -37,9 +38,13 @@ defmodule Mapail.Mixfile do
 
   defp description() do
     ~s"""
-    Convert maps with string keys to an elixir struct with Mapail.
+    Helper library to convert a map into a struct or a struct to a struct.
     """
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_),     do: ["lib"]
+
 
   defp package() do
     %{
@@ -51,7 +56,9 @@ defmodule Mapail.Mixfile do
   end
 
   defp docs() do
-    [main: "api-reference"]
+    [
+      main: "Mapail"
+    ]
   end
 
 end

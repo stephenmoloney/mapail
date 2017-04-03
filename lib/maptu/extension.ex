@@ -1,28 +1,29 @@
 defmodule Maptu.Extension do
   @moduledoc """
-  Custom functions absent from [Maptu](https://github.com/lexhide/maptu)
-  and superfluous to Maptu requirements but required for Mapail to function properly.
-  This module builds on top of `maptu.ex` and contains extracts from `maptu.ex`,
-  thereby, extending the available functionality. Where possible, the original Maptu
-  functions are called.
+  Contains custom functions extending [Maptu](https://github.com/lexhide/maptu)
+  and superfluous to Maptu requirements. This module builds on top of `maptu.ex`
+  and with extracts and modifications of `maptu.ex`. Mapail would not
+  work without the additional functionality in this module.
 
-  Acknowldegements:
+  Maptu Creators:
 
-      Credit to the Maptu Creators:
+      - [Andrea Leopardi](https://github.com/whatyouhide)
+      - [Aleksei Magusev](https://github.com/lexmag)
 
-          - [Andrea Leopardi](https://github.com/whatyouhide)
-          - [Aleksei Magusev](https://github.com/lexmag)
+  Maptu License:
 
-      Maptu License:
+      - MIT
+      - https://github.com/lexhide/maptu/blob/master/LICENSE.txt
 
-          - MIT
-          - https://github.com/lexhide/maptu/blob/master/LICENSE.txt
+  Modified by:
+
+      - Stephen Moloney
   """
-
   import Kernel, except: [struct: 1, struct: 2]
 
   @type non_strict_error_reason ::
     :missing_struct_key
+    | :atom_key_not_expected
     | {:bad_module_name, binary}
     | {:non_existing_module, binary}
     | {:non_struct, module}
@@ -34,12 +35,13 @@ defmodule Maptu.Extension do
     | {:unknown_struct_field, module, atom}
 
   # We use a macro for this so we keep a nice stacktrace.
-  defmacrop raise_on_error(code) do
+  @doc :false
+  defmacro raise_on_error(code) do
     quote do
       case unquote(code) do
         {:ok, result}    -> result
         {:ok, result, rest} -> rest
-        {:error, reason} -> raise ArgumentError, format_error(reason)
+        {:error, reason} -> raise(ArgumentError, Maptu.Extension.format_error(reason))
       end
     end
   end
@@ -68,7 +70,7 @@ defmodule Maptu.Extension do
       {:error, {:non_struct, GenServer}}
 
   """
-  @spec struct_rest(%{}) :: {:ok, %{}, %{}} | {:error, non_strict_error_reason}
+  @spec struct_rest(map) :: {:ok, struct, map} | {:error, non_strict_error_reason}
   def struct_rest(map) do
     with {:ok, {mod_name, fields}} <- extract_mod_name_and_fields(map),
          :ok                       <- ensure_exists(mod_name),
@@ -96,7 +98,7 @@ defmodule Maptu.Extension do
       ** (ArgumentError) module is not a struct: GenServer
 
   """
-  @spec rest!(%{}) :: %{} | no_return
+  @spec rest!(map) :: map | no_return
   def rest!(map) do
     map |> struct_rest() |> raise_on_error()
   end
@@ -123,7 +125,7 @@ defmodule Maptu.Extension do
       {:error, {:non_struct, GenServer}}
 
   """
-  @spec struct_rest(module, %{}) :: {:ok, %{}, %{}} | {:error, non_strict_error_reason}
+  @spec struct_rest(module, map) :: {:ok, struct, map} | {:error, non_strict_error_reason}
   def struct_rest(mod, fields) when is_atom(mod) and is_map(fields) do
     with :ok <- ensure_exists(mod),
          :ok <- ensure_struct(mod),
@@ -148,13 +150,13 @@ defmodule Maptu.Extension do
       ** (ArgumentError) module is not a struct: GenServer
 
   """
-  @spec rest!(module, %{}) :: %{} | no_return
+  @spec rest!(module, map) :: map | no_return
   def rest!(mod, fields) do
     struct_rest(mod, fields) |> raise_on_error()
   end
 
 
-  # Private
+  # Private or docless
 
 
   defp extract_mod_name_and_fields(%{"__struct__" => "Elixir." <> _} = map),
@@ -206,9 +208,15 @@ defmodule Maptu.Extension do
     {:ok, result, rest}
   end
 
-  defp to_existing_atom_safe(bin) when is_binary(bin) do
+#  @doc :false
+#  This function can be extended if want to allow atom keys
+#  def to_existing_atom_safe(arg) when is_atom(arg) do
+#    {:ok, arg}
+#  end
+  @doc :false
+  def to_existing_atom_safe(arg) when is_binary(arg) do
     try do
-      String.to_existing_atom(bin)
+      String.to_existing_atom(arg)
     rescue
       ArgumentError -> :error
     else
@@ -216,17 +224,26 @@ defmodule Maptu.Extension do
     end
   end
 
-  defp format_error(:missing_struct_key),
+  @doc :false
+  def format_error(:missing_struct_key),
     do: "the given map doesn't contain a \"__struct__\" key"
-  defp format_error({:bad_module_name, name}) when is_binary(name),
+  @doc :false
+  def format_error(:atom_key_not_expected),
+    do: "the map may contain an atom key which is not expected"
+  @doc :false
+  def format_error({:bad_module_name, name}) when is_binary(name),
     do: "not an elixir module: #{inspect name}"
-  defp format_error({:non_existing_module, mod}) when is_binary(mod),
+  @doc :false
+  def format_error({:non_existing_module, mod}) when is_binary(mod),
     do: "module doesn't exist: #{inspect mod}"
-  defp format_error({:non_struct, mod}) when is_atom(mod),
+  @doc :false
+  def format_error({:non_struct, mod}) when is_atom(mod),
     do: "module is not a struct: #{inspect mod}"
-  defp format_error({:non_existing_atom, bin}) when is_binary(bin),
+  @doc :false
+  def format_error({:non_existing_atom, bin}) when is_binary(bin),
     do: "atom doesn't exist: #{inspect bin}"
-  defp format_error({:unknown_struct_field, struct, field})
+  @doc :false
+  def format_error({:unknown_struct_field, struct, field})
   when is_atom(struct) and is_atom(field),
     do: "unknown field #{inspect field} for struct #{inspect struct}"
 end
