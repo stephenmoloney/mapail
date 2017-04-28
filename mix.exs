@@ -25,7 +25,10 @@ defmodule Mapail.Mixfile do
 
 
   def application() do
-    [applications: [:maptu]]
+    [
+      mod: [],
+      applications: [:maptu]
+    ]
   end
 
   defp deps() do
