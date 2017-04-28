@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.2
+
+[changes]
+- Revert - Remove `mod: []` from applications. there is no application/supervisor
+so this also causes release errors.
+
 ## v1.0.1
 
 [changes]

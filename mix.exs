@@ -1,7 +1,7 @@
 defmodule Mapail.Mixfile do
   use Mix.Project
   @elixir_versions "~> 1.3 or ~> 1.4 or ~> 1.5"
-  @version "1.0.1"
+  @version "1.0.2"
   @source_url "https://github.com/stephenmoloney/mapail"
   @maintainers ["Stephen Moloney"]
 
@@ -26,7 +26,6 @@ defmodule Mapail.Mixfile do
 
   def application() do
     [
-      mod: [],
       applications: [:maptu]
     ]
   end
