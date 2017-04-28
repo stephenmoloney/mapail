@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.1
+
+[changes]
+- Add `:maptu` to apps in releases to remove warning when
+making a release.
+- Some changes to docs.
+
 ## v1.0.0
 
 [breaking change]

@@ -8,7 +8,7 @@ defmodule Mapail do
   Convert atom-keyed and atom/string mixed key maps to
   structs by piping the `stringify_map/1` into the `map_to_struct/3` function.
 
-  Convert structs to structs by calling the `struct_to_struct/2` function.
+  Convert structs to structs by calling the `struct_to_struct/3` function.
 
 
   ## Note
@@ -24,12 +24,17 @@ defmodule Mapail do
 
   ## Features
 
-  - Transformations: Optionally, string manipulations can be applied to the string of
-  the map so as to attempt to force the key of the map to match the key of the struct.
-  Currently, the only transformation option is conversion to `:snake_case`.
+  - String keyed maps: Convert maps with string keys to a corresponding struct.
 
-  - Residual maps: Optionally, the part of the map leftover after the struct has
-  been built can be retrieved or merged back into the returned struct.
+  - Transformations: Optionally, string manipulations can be applied to the key of the map so as to attempt to
+  force the key to match the key of the struct. Currently, the only transformation option is conversion to snake_case.
+
+  - Residual maps: Optionally, the part of the map leftover after the struct has been built can be retrieved
+  or merged back into the returned struct.
+
+  - Helper function for converting atom-keyed maps or string/atom mixed keyed maps to string-keyed only maps.
+
+  - Helper function for converting a struct to another struct.
 
 
   ## Limitations
@@ -43,61 +48,61 @@ defmodule Mapail do
 
   - Scenario 1:
 
-  Map <==> Struct has a perfect match on the keys.
+  Map and Struct has a perfect match on the keys.
 
-      - `map_to_struct(map, MODULE)` returns `{:ok, %MODULE{} = new_struct}`
+      map_to_struct(map, MODULE)` returns `{:ok, %MODULE{} = new_struct}
 
 
   - Scenario 2:
 
-  Map <==> Struct has an imperfect match on the keys
+  Map and Struct has an imperfect match on the keys
 
-      - `map_to_struct(map, MODULE, rest: :true)` returns `{:ok, %MODULE{} = new_struct, rest}`
+      map_to_struct(map, MODULE, rest: :true)` returns `{:ok, %MODULE{} = new_struct, rest}
 
 
   - Scenario 3:
 
-  Map <==> Struct has an imperfect match on the keys and a struct with and additional
+  Map and Struct has an imperfect match on the keys and a struct with and additional
   field named `:mapail` is returned. The value for the `:mapail` fields is a
   nested map with all non-matching key-pairs.
 
 
-      - `map_to_struct(map, MODULE, rest: :merge)` returns `{:ok, %MODULE{} = new_struct}`
+      map_to_struct(map, MODULE, rest: :merge)` returns `{:ok, %MODULE{} = new_struct}
       where `new_struct.mapail` contains the non-mathing `key-value` pairs.
 
 
   - Scenario 4:
 
-  Map <==> Struct has an imperfect match on the keys. After an initial attempt to
-   match the map keys to those of the struct keys, any non-matching keys are piped
-   through transformation function(s) which modify the key of the map in an attempt
-   to make a new match with the modified key. For now, the only transformations supported
-   are `[:snake_case]`. `:snake_case` converts the non-matching keys to snake_case.
+  Map and Struct has an imperfect match on the keys. After an initial attempt to
+  match the map keys to those of the struct keys, any non-matching keys are piped
+  through transformation function(s) which modify the key of the map in an attempt
+  to make a new match with the modified key. For now, the only transformations supported
+  are `[:snake_case]`. `:snake_case` converts the non-matching keys to snake_case.
 
-    ***NOTE***: This approach is lenient and will make matches that
-   otherwise would not have matched. It might prove useful where a `json` encoded map
-   returned from a server uses camelcasing and matches are otherwise missed. ***Only
-   use this approach when it is explicitly desired behaviour***
+  ***NOTE***: This approach is lenient and will make matches that
+  otherwise would not have matched. It might prove useful where a `json` encoded map
+  returned from a server uses camelcasing and matches are otherwise missed. ***Only
+  use this approach when it is explicitly desired behaviour***
 
 
-      - `map_to_struct(map, MODULE, transformations: [:snake_case], rest: :true)`
+      map_to_struct(map, MODULE, transformations: [:snake_case], rest: :true)
       returns `{:ok, new_struct, rest}`
 
 
   - Scenario 5:
 
-  Map <==> Struct has a perfect match but the keys in the map are mixed case. Mapail
-   provides a utility function which can help in this situation.
+  Map and Struct has a perfect match but the keys in the map are mixed case. Mapail
+  provides a utility function which can help in this situation.
 
-      - `stringify_map(map) |> map_to_struct(map, MODULE, rest: :false)`
-      returns `{:ok, %MODULE{} = new_struct}`
+      stringify_map(map) |> map_to_struct(map, MODULE, rest: :false)
+      returns {:ok, %MODULE{} = new_struct}
 
 
   - Scenario 6:
 
-  Struct <==> Struct has a perfect match but the __struct__ fields are non-matching.
+  Struct and Struct has a perfect match but the __struct__ fields are non-matching.
 
-      - `struct_to_struct(%Notifications.Email{}, User.Email)` returns `{:ok, %User.Email{} = new_struct}`
+      struct_to_struct(%Notifications.Email{}, User.Email)` returns `{:ok, %User.Email{} = new_struct}
 
 
   ## Example - exact key matching (no transformations)
@@ -238,25 +243,16 @@ defmodule Mapail do
   @doc """
   Convert one form of struct into another struct.
 
-  ## Example
+  ## opts
 
-      defmodule MyApp.URI do
-        defstruct scheme: nil, path: nil, query: nil,
-            fragment: nil, authority: nil,
-            userinfo: nil, host: nil, port: nil,
-            custom: nil
-      end
+  `[]` - same as `[rest: :false]`, `{:ok, struct}` is returned and any non-matching pairs
+  will be discarded.
 
-      {:ok, new_struct} = struct_to_struct(%URI{}, MyApp.URI)
+  `[rest: :true]`, `{:ok, struct, map}` is returned where map are the non-matching
+  key-value pairs.
 
-      {:ok, new_struct, rest} = struct_to_struct(%URI{}, MyApp.URI, rest: :true)
-
-  ## Arguments
-
-      - old_struct - the originator struct
-      - module - The type of new struct which shall be returned
-      - opts - The key-value pairs can be returned separately if
-      `opts = [rest: :true]`. Defaults to `[]`.
+  `[rest: :false]`, `{:ok, struct}` is returned and any non-matching pairs
+  will be discarded.
   """
   @spec struct_to_struct(map, atom, list) :: {:ok, struct} | {:ok, struct, map} | {:error, String.t}
   def struct_to_struct(old_struct, module, opts \\ []) do
@@ -279,23 +275,7 @@ defmodule Mapail do
 
 
   @doc """
-  Convert one form of struct into another struct.
-
-  ## Example
-
-      defmodule MyApp.URI do
-        defstruct scheme: nil, path: nil, query: nil,
-            fragment: nil, authority: nil,
-            userinfo: nil, host: nil, port: nil,
-            custom: nil
-      end
-
-      new_struct = struct_to_struct(%URI{}, MyApp.URI)
-
-  ## Arguments
-
-      - old_struct - the originator struct
-      - module - The type of new struct which shall be returned
+  Convert one form of struct into another struct and raises an error on fail.
   """
   @spec struct_to_struct!(map, atom) :: struct | no_return
   def struct_to_struct!(old_struct, module) do
